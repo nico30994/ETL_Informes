@@ -1,4 +1,4 @@
-##ETL_Informes
+## ETL_Informes
 ## Resumen
 Se necesita solucionar las limitaciones del ERP a la hora de analizar los datos de forma rápida y consistente, por lo que se busca aplicar herramientas de ETL para transformar la información que antes se hacía manualmente, generar una API y recibir la información en formato JSON (un solo endpoint) para ser utilizado en dos tablas en un servidor HTML para garantizar la toma de decisiones basadas en datos de forma automática.
 
