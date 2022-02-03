@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 '''
-Definir los nombres de las columnas a cambiar
-{[nombre de columna en ERP : nombre de columna necesario]}
+Definition of the titles of the columns
+{[column names in ERP : column names in needed]}
 '''
 
 dict_cols = {
@@ -45,21 +45,22 @@ dict_cols = {
 }
 
 def interc_cols(df_p,col_1,val_str,col_new,val_new):
-  ''' Crea columnas nuevas si col_1 contiene val_str
-   Sirve para intercambiar los valores de la columna porque se encuentran desordenados desde el ERP
+  '''
+  If col_1 contains val_str new columns are created
+  The information is sorted by exchanging the values ​​of certain columns if necessary
 
      df_p = df
-     col_1 = Columna que contiene la palabra
-     val_str = Palabra a buscar
-     col_new = Título de la columna temporal, puede ser lista
-     val_new = Valor de la columna temporal, puede ser lista de columnas a reemplazar (df_p.fc_nro)
+     col_1 = Column containing the word
+     val_str = Word to search
+     col_new = Temporary column titles, can be a list
+     val_new = Temporary column value, can be a list (df_p.fc_nro)
   '''
-  # Si encuentra una inconsistencia (FC en columna RT o al revez) en la tabla realiza el intercambio de las columnas
+  # If it finds an inconsistency (FC in RT column or vice versa) in the table, it exchanges the columns
   for i in range(len(col_new)):
     df_p.loc[col_1.str.contains(val_str,na=False), col_new[i]] = val_new[i]
     i += 1
   
-  # Reemplazar columnas temporales
+  # Replace temporary columns
   for i in range(len(col_new)):
     df_p.loc[col_1.str.contains(val_str,na=False), str(val_new[i].name)] = df_p['{}_2'.format(val_new[i].name)]
     i += 1
@@ -67,16 +68,14 @@ def interc_cols(df_p,col_1,val_str,col_new,val_new):
   return df_p.drop(col_new, axis=1)
 
 def main():
-        # Leer TXT --> Querie RQ-OC-RTO-FC del ERP
+    # Import
     df = pd.read_csv('./RQ.txt', sep='\t', encoding='utf-8', error_bad_lines=False)
 
-    # Borrar leyendas que no sirven para el análisis (NaN en "oc_articulo_generico" // 'Ítem - Artículo - Cód. Gen.')
+    # Transform
     df = df[df['Ítem - Artículo - Cód. Gen.'].notna()]
-
-    # Reemplazar NaN => None (Para que lo acepte postgresql)
     df = df.fillna(np.nan).replace([np.nan], [None])
 
-    # Reemplazar títulos de cols
+    # Replace column names
     df.rename(dict_cols, axis=1, inplace=True)
 
     df = interc_cols(
@@ -87,19 +86,17 @@ def main():
         val_new = [df.fc_fecha, df.fc_nro, df.fc_cantidad, df.rt_fecha, df.rt_nro, df.rt_cantidad]
     )
 
-    ### Genero tabla de [OC, item] --> Cantidades
+    # Table generation
     df_oc = df.set_index(['oc_nro','oc_articulo_generico'])
     df_oc = df_oc.loc[pd.IndexSlice[:],['oc_articulo_desc','oc_cantidad']].drop_duplicates().sort_values(['oc_nro','oc_articulo_generico'])
 
-    ### Genero tabla de [OC, 1er posterior, 2do posterior] --> Cantidades
     df_1er = df.set_index(['oc_nro','oc_articulo_generico'])
     df_1er = df_1er.loc[pd.IndexSlice[:],['fc_nro','fc_cantidad','rt_nro','rt_cantidad']].sort_values(['oc_nro','oc_articulo_generico'])
 
-    # Cambiar nombre de columnas
     df_oc.columns = ['Descripción','Cantidad']
     df_1er.columns = ['Nro. FC', 'Cant. FC','Nro. RT', 'Cant. RT']
 
-    # Exportar JSON
+    # Export
     df_oc.to_json('./out/df_oc.json',orient="split")
     df_1er.to_json('./out/df_1er.json',orient="split")
     print("JSON Exportado a carpeta 'out'")
